@@ -1,39 +1,49 @@
-import currencies_module as cm
 import paho.mqtt.client as mqtt
 import time
+import pyttsx3 as tts
 
 BROKER = "localhost"
 # BROKER = "mqtt.lab.ii.agh.edu.pl"
-ID = "grelam"
-
 
 def send(topic, payload):
     global client
-    print("snd", topic, payload)
     client.publish(topic, payload, retain=False)
 
 
 def on_message(client, userdata, message):
+    global kk
+
     topic = message.topic
     payload = str(message.payload.decode("utf-8"))
+
     print("rcv", topic, payload)
-    answer = cm.prepare_answer(payload.lower())
-    if answer is not None:
-        send("cmd/tts/" + ID, answer)
+    kk.append(payload)
 
 
 def init():
     global client
-    client = mqtt.Client(ID)
+    client = mqtt.Client("spk-pc")
     client.on_message = on_message
+    print("connecting to broker")
     client.connect(BROKER)
     client.loop_start()
-    client.subscribe(("sig/stt/#", 0))
+    client.subscribe(("cmd/tts/grelam", 0))
 
 
-if __name__ == '__main__':
-    # init()
+def loop():
+    global kk
+    engine = tts.init()
+    engine.setProperty('volume', 0.7)
+    engine.setProperty('rate', 190)
+
+    kk = []
+
     while True:
-        # time.sleep(1)
-        query = input()
-        print(cm.prepare_answer(query))
+        while len(kk) > 0:
+            engine.say(kk.pop(0))
+            engine.runAndWait()
+            time.sleep(1)
+
+
+init()
+loop()
