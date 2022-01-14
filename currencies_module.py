@@ -1,6 +1,8 @@
 import requests
 import json
 from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
+import calendar
 import exceptions as exc
 
 NBP_API = "http://api.nbp.pl/api/exchangerates/rates/"
@@ -70,7 +72,7 @@ def get_api_response(table, currency, from_date='/', to_date=''):
     return response
 
 
-def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date=''):
+def find_table_and_rate(currency, rate):
     if currency in SPECIAL_A_TABLE_CURRENCIES:
         table = 'a'
         currency_code = SPECIAL_A_TABLE_CURRENCIES[currency].lower()
@@ -86,6 +88,11 @@ def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date='')
     if rate == 'bid' or rate == 'ask':
         table = 'c'
 
+    return table, currency_code
+
+
+def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date=''):
+    table, currency_code = find_table_and_rate(currency, rate)
     currency_data = get_api_response(table, currency_code, from_date, to_date)
     value = currency_data['rates'][0][rate]
     return value
@@ -381,6 +388,55 @@ def compare_currencies_response(currencies, rate, date='/', higher=True):
         return start + ' ' + currency + ' ' + time + ' ' + compare
 
 
+def get_best_date(currency, rate, date_from, date_to, best=True):
+    table, currency_code = find_table_and_rate(currency, rate)
+    currency_data = get_api_response(table, currency_code, date_from, date_to)
+    chosen_day = ''
+
+    if best:
+        value = 0
+    else:
+        value = 10000
+
+    for rates in currency_data['rates']:
+        if (best and rates[rate] > value) or (not best and rates[rate] < value):
+            value = rates[rate]
+            chosen_day = rates['effectiveDate']
+
+    return chosen_day
+
+
+def get_single_currency_from_query(query):
+    for curr in A_TABLE_CURRENCIES:
+        if curr in query:
+            return curr
+
+    for curr in B_TABLE_CURRENCIES:
+        if curr in query:
+            return curr
+
+    for curr in SPECIAL_A_TABLE_CURRENCIES:
+        if curr in query:
+            return curr
+
+    raise exc.InvalidCurrency
+
+
+def get_best_date_response(currency, rate, date_from, date_to, time, time_unit, best=True):
+    day_to_return = get_best_date(currency, rate, date_from, date_to, best)
+    if best:
+        best = 'największy'
+    else:
+        best = 'najmniejszy'
+
+    if time_unit == 0:
+        time_unit = 'tym'
+    else:
+        time_unit = 'zeszłym'
+
+    return 'W ' + time_unit + ' ' + time + ' kurs ' + currency + ' był ' + best + ' dnia ' + day_to_return
+
+
 def prepare_answer(query):
     try:
         if 'kurs' in query:
@@ -414,6 +470,41 @@ def prepare_answer(query):
                     currencies = get_currencies_from_text(query_split[1])
                     return get_difference_between_dates_response(query_split[1], currencies, rate)
 
+                if 'największy' in query or 'najmniejszy' in query or 'najlepszy' in query or 'najgorszy' in query \
+                        or 'najwyższy' in query or 'najniższy' in query:
+                    add_value = None
+                    if 'największy' in query or 'najlepszy' in query or 'najwyższy' in query:
+                        best = True
+                    else:
+                        best = False
+
+                    if 'w zeszłym' in query or 'zeszłego' in query or 'poprzedniego' in query or 'w poprzednim' in query or 'w ostatnim' in query or 'ostatniego':
+                        add_value = -1
+
+                    if 'tego' in query or 'w tym' in query:
+                        add_value = 0
+
+                    if ('miesiąca' in query or 'miesiącu' in query) and add_value is not None:
+                        current_date = date.today() + relativedelta(months=add_value)
+                        start_date = current_date.strftime('%Y-%m-%d')[:-2] + '01'
+                        end_date = current_date.strftime('%Y-%m-%d')
+                        if add_value == -1:
+                            end_date = end_date[:-2] + str(
+                                calendar.monthrange(current_date.year, current_date.month)[1])
+
+                        currency = get_single_currency_from_query(query)
+                        return get_best_date_response(currency, rate, start_date, end_date, 'miesiącu', add_value, best)
+
+                    if 'roku' in query and add_value is not None:
+                        current_date = date.today() + relativedelta(years=add_value)
+                        start_date = current_date.strftime('%Y-%m-%d')[:-5] + '01-01'
+                        end_date = current_date.strftime('%Y-%m-%d')
+                        if add_value == -1:
+                            end_date = end_date[:-5] + '12-31'
+
+                        currency = get_single_currency_from_query(query)
+                        return get_best_date_response(currency, rate, start_date, end_date, 'roku', add_value, best)
+
                 if 'większy' in query_split[1] or 'mniejszy' in query_split[1]:
                     if 'większy' in query_split[1]:
                         higher = True
@@ -427,9 +518,6 @@ def prepare_answer(query):
                     elif 'był' in query_split[1]:
                         date_to_check = get_date_from_text(query_split[1])
                         return compare_currencies_response(currencies, rate, date=date_to_check, higher=higher)
-
-
-
 
         if 'kod' in query:
             if 'jaki' in query or 'podaj' in query:
