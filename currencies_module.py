@@ -13,9 +13,11 @@ A_TABLE_CURRENCIES = {'bata': 'THB', 'dolara amerykańskiego': 'USD', 'dolara au
                       'liry tureckiej': 'TRY', 'szekla izraelskiego': 'ILS', 'peso chilijskiego': 'CLP',
                       'peso filipińskiego': 'PHP', 'peso meksykańskiego': 'MXN', 'randa': 'ZAR', 'reala': 'BRL',
                       'ringgita': 'MYR', 'rubla rosyjskiego': 'RUB', 'rupii indonezyjskiej': 'IDR',
-                      'rupii indyjskiej': 'INR', 'wona południowokoreańskiego': 'KRW', 'juana': 'CNY', 'dolara': 'USD',
-                      'franka': 'CHF', 'funta': 'GBP', 'leja': 'RON', 'liry': 'TRY', 'szekla': 'ILS', 'peso': 'MXN',
-                      'rubla': 'RUB', 'rupii': 'INR', 'wona': 'KRW', 'renminbi': 'CNY'}
+                      'rupii indyjskiej': 'INR', 'wona południowokoreańskiego': 'KRW', 'juana': 'CNY',
+                      'renminbi': 'CNY'}
+
+SPECIAL_A_TABLE_CURRENCIES = {'dolara': 'USD', 'franka': 'CHF', 'funta': 'GBP', 'leja': 'RON', 'liry': 'TRY',
+                              'szekla': 'ILS', 'peso': 'MXN', 'rubla': 'RUB', 'rupii': 'INR', 'wona': 'KRW'}
 
 B_TABLE_CURRENCIES = {'afgani': 'AFN', 'ariary': 'MGA', 'balboa': 'PAB', 'birra': 'ETB', 'boliwara': 'VES',
                       'boliwiano': 'BOB', 'kolona kostarykańskiego': 'CRC', 'kolona salwadorskiego': 'SVC',
@@ -27,7 +29,7 @@ B_TABLE_CURRENCIES = {'afgani': 'AFN', 'ariary': 'MGA', 'balboa': 'PAB', 'birra'
                       'dolara brunejskiego': 'BND', 'dolara fidżi': 'FJD', 'dolara gujańskiegp': 'GYD',
                       'dolara jamajskiego': 'JMD', 'dolara liberyjskiego': 'LRD', 'dolara namibijskiego': 'NAD',
                       'dolara surinamskiego': 'SRD', 'dolara trynidadu i tobago': 'TTD',
-                      'dolara wschodniokaraibskiego': 'XCD', 'dolara Wysp Salomona': 'SBD', 'dolara Zimbabwe': 'ZWL',
+                      'dolara wschodniokaraibskiego': 'XCD', 'dolara wysp salomona': 'SBD', 'dolara zimbabwe': 'ZWL',
                       'donga': 'VND', 'drama': 'AMD', 'eskudo': 'CVE', 'florina arubańskiego': 'AWG',
                       'franka burundyjskiego': 'BIF', 'franka dżibuti': 'DJF', 'franka gwinejski': 'GNF',
                       'franka komorów': 'KMF', 'franka kongijskiego': 'CDF', 'franka rwandyjskiego': 'RWF',
@@ -69,14 +71,17 @@ def get_api_response(table, currency, from_date='/', to_date=''):
 
 
 def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date=''):
-    if currency in A_TABLE_CURRENCIES:
+    if currency in SPECIAL_A_TABLE_CURRENCIES:
+        table = 'a'
+        currency_code = SPECIAL_A_TABLE_CURRENCIES[currency].lower()
+    elif currency in A_TABLE_CURRENCIES:
         table = 'a'
         currency_code = A_TABLE_CURRENCIES[currency].lower()
     elif currency in B_TABLE_CURRENCIES:
         table = 'b'
         currency_code = B_TABLE_CURRENCIES[currency].lower()
     else:
-        return
+        raise exc.InvalidCurrency
 
     if rate == 'bid' or rate == 'ask':
         table = 'c'
@@ -173,12 +178,22 @@ def get_currencies_from_text(text):
     second_currency = ''
     for element in text[1].split():
         second_currency += element
-        if second_currency in A_TABLE_CURRENCIES or second_currency in B_TABLE_CURRENCIES or second_currency == 'złotego':
+        if second_currency in A_TABLE_CURRENCIES or second_currency in B_TABLE_CURRENCIES or \
+                second_currency == 'złotego':
             break
         second_currency += ' '
 
-    if second_currency not in A_TABLE_CURRENCIES and second_currency not in B_TABLE_CURRENCIES \
-            and second_currency != 'złotego':
+    if second_currency not in A_TABLE_CURRENCIES and second_currency not in B_TABLE_CURRENCIES:
+        second_currency = ''
+        for element in text[1].split():
+            second_currency += element
+            if second_currency in A_TABLE_CURRENCIES or second_currency in B_TABLE_CURRENCIES or \
+                    second_currency == 'złotego':
+                break
+            second_currency += ' '
+
+    if second_currency not in SPECIAL_A_TABLE_CURRENCIES and second_currency not in A_TABLE_CURRENCIES and \
+            second_currency not in B_TABLE_CURRENCIES and second_currency != 'złotego':
         raise exc.InvalidCurrency
 
     return [first_currency, second_currency]
@@ -208,9 +223,35 @@ def get_difference_between_dates_response(text, currencies, rate):
         return rate_text + currencies[0] + ' do ' + currencies[1] + ' zmalał o około ' + \
                str(round(difference, 2))[1:].replace('.', ',')
     elif difference > 0:
-        return rate_text + currencies[0] + ' do ' + currencies[1] + ' wzrósł o około ' + str(difference).replace('.', ',')
+        return rate_text + currencies[0] + ' do ' + currencies[1] + ' wzrósł o około ' + \
+               str(difference).replace('.', ',')
     else:
         return rate_text + currencies[0] + ' do ' + currencies[1] + ' nie zmienił się'
+
+
+def check_code_in_table(table, word):
+    code = ''
+    curr = ''
+    for code_in_table in table.values():
+        if word == code_in_table:
+            code = code_in_table
+            curr = list(table.keys())[list(table.values()).index(code)]
+            break
+
+    return code, curr
+
+
+def check_currency_in_table(table, query):
+    code = ''
+    curr = ''
+
+    for currency in table.keys():
+        if currency in query:
+            code = table[currency]
+            curr = currency
+            break
+
+    return code, curr
 
 
 def get_currency_by_code(query):
@@ -219,17 +260,13 @@ def get_currency_by_code(query):
     curr = ''
     for word in words:
         word = word.upper()
-        for code_in_table in A_TABLE_CURRENCIES.values():
-            if word == code_in_table:
-                code = code_in_table
-                curr = list(A_TABLE_CURRENCIES.keys())[list(A_TABLE_CURRENCIES.values()).index(code)]
-                break
+        code, curr = check_code_in_table(SPECIAL_A_TABLE_CURRENCIES, word)
 
-        for code_in_table in B_TABLE_CURRENCIES.values():
-            if word == code_in_table:
-                code = code_in_table
-                curr = list(B_TABLE_CURRENCIES.keys())[list(B_TABLE_CURRENCIES.values()).index(code)]
-                break
+        if code == '' and curr == '':
+            code, curr = check_code_in_table(A_TABLE_CURRENCIES, word)
+
+        if code == '' and curr == '':
+            code, curr = check_code_in_table(B_TABLE_CURRENCIES, word)
 
     if code == '':
         raise exc.CodeNotFound
@@ -238,26 +275,110 @@ def get_currency_by_code(query):
 
 
 def get_code_by_currency(query):
-    code = ''
-    curr = ''
-
-    for currency in A_TABLE_CURRENCIES.keys():
-        if currency in query:
-            code = A_TABLE_CURRENCIES[currency]
-            curr = currency
-            break
-
-    if code == '':
-        for currency in B_TABLE_CURRENCIES.keys():
-            if currency in query:
-                code = B_TABLE_CURRENCIES[currency]
-                curr = currency
-                break
-
-    if curr == '':
+    code, curr = check_currency_in_table(A_TABLE_CURRENCIES, query)
+    if code == '' and curr == '':
+        code, curr = check_currency_in_table(B_TABLE_CURRENCIES, query)
+    if code == '' and curr == '':
+        code, curr = check_currency_in_table(SPECIAL_A_TABLE_CURRENCIES, query)
+    if code == '' and curr == '':
         raise exc.InvalidCurrency
 
     return 'Kod ' + curr + ' to ' + code
+
+
+def get_currencies_to_compare(text):
+    text = text.split(' czy ')
+    if len(text) == 1:
+        raise exc.OnlyOneCurrency
+    first_currency = ''
+    second_currency = ''
+
+    first_to_check = text[0].split()
+    first_to_check.reverse()
+    for element in first_to_check:
+        first_currency = element + first_currency
+        if first_currency in SPECIAL_A_TABLE_CURRENCIES or first_currency in A_TABLE_CURRENCIES or \
+                first_currency in B_TABLE_CURRENCIES:
+            break
+        first_currency = ' ' + first_currency
+
+    if first_currency not in A_TABLE_CURRENCIES and first_currency not in B_TABLE_CURRENCIES:
+        first_currency = ''
+        for element in first_to_check:
+            first_currency = element + first_currency
+            if first_currency in SPECIAL_A_TABLE_CURRENCIES:
+                break
+            first_currency = ' ' + first_currency
+
+        if first_currency not in SPECIAL_A_TABLE_CURRENCIES and first_currency not in A_TABLE_CURRENCIES and \
+                first_currency not in B_TABLE_CURRENCIES:
+            raise exc.InvalidCurrency
+
+    for element in text[1].split():
+        second_currency += element
+        if second_currency in A_TABLE_CURRENCIES or second_currency in B_TABLE_CURRENCIES:
+            break
+        second_currency += ' '
+
+    if second_currency not in A_TABLE_CURRENCIES and second_currency not in B_TABLE_CURRENCIES:
+        second_currency = ''
+        for element in text[1].split():
+            second_currency += element
+            if SPECIAL_A_TABLE_CURRENCIES:
+                break
+            second_currency += ' '
+
+        if second_currency not in SPECIAL_A_TABLE_CURRENCIES and second_currency not in A_TABLE_CURRENCIES and \
+                second_currency not in B_TABLE_CURRENCIES:
+            raise exc.InvalidCurrency
+
+    return [first_currency, second_currency]
+
+
+def compare_currencies(currencies, rate, date='/', higher=True):
+    first_currency_value = get_exchange_rate_single_currency(currencies[0], rate, date)
+    second_currency_value = get_exchange_rate_single_currency(currencies[1], rate, date)
+    if higher:
+        if first_currency_value > second_currency_value:
+            return currencies[0]
+        elif first_currency_value < second_currency_value:
+            return currencies[1]
+        else:
+            return 'równe'
+    else:
+        if first_currency_value < second_currency_value:
+            return currencies[0]
+        elif first_currency_value > second_currency_value:
+            return currencies[1]
+        else:
+            return 'równe'
+
+
+def compare_currencies_response(currencies, rate, date='/', higher=True):
+    currency = compare_currencies(currencies, rate, date, higher)
+    if rate == 'mid':
+        rate = 'średni kurs'
+    elif rate == 'bid':
+        rate = 'kurs kupna'
+    else:
+        rate = 'kurs sprzedaży'
+
+    if date == '/':
+        start = rate
+        time = 'jest'
+    else:
+        start = 'Dnia ' + date + ' ' + rate
+        time = 'był'
+
+    if higher:
+        compare = 'większy'
+    else:
+        compare = 'mniejszy'
+
+    if currency == 'równe':
+        return start + ' ' + currencies[0] + ' i ' + currencies[1] + ' ' + time + ' taki sam'
+    else:
+        return start + ' ' + currency + ' ' + time + ' ' + compare
 
 
 def prepare_answer(query):
@@ -265,30 +386,50 @@ def prepare_answer(query):
         if 'kurs' in query:
             if 'kupna' in query:
                 rate = 'bid'
-                rate_sep = ' kurs kupna '
+                rate_sep = 'kurs kupna '
             elif 'sprzedaży' in query:
                 rate = 'ask'
-                rate_sep = ' kurs sprzedaży '
+                rate_sep = 'kurs sprzedaży '
             else:
-                rate_sep = ' kurs '
+                rate_sep = 'kurs '
                 rate = 'mid'
                 if 'średni' in query:
-                    rate_sep = ' średni kurs '
+                    rate_sep = 'średni kurs '
 
             query_split = query.split(rate_sep)
             if len(query_split) == 2:
-                currencies = get_currencies_from_text(query_split[1])
                 check = query_split[0]
+                check = check.rstrip()
                 if check in ['jaki jest teraźniejszy', 'jaki jest', 'jaki jest obecny', 'jaki jest bieżący',
                              'jaki jest dzisiejszy', 'podaj', 'podaj teraźniejszy', 'podaj obecny',
-                             'podaj dzisiejszy', 'podaj bieżący']:
+                             'podaj dzisiejszy', 'podaj bieżący', 'jaki jest aktualny', 'podaj aktualny']:
+                    currencies = get_currencies_from_text(query_split[1])
                     return get_current_exchange_rate_response(currencies, rate)
 
                 if check in ['jaki był', 'ile wynosił', 'jaką miał wartość']:
+                    currencies = get_currencies_from_text(query_split[1])
                     return get_exchange_rate_by_date_response(currencies, query_split[1], rate)
 
                 if check in ['jak zmienił się']:
+                    currencies = get_currencies_from_text(query_split[1])
                     return get_difference_between_dates_response(query_split[1], currencies, rate)
+
+                if 'większy' in query_split[1] or 'mniejszy' in query_split[1]:
+                    if 'większy' in query_split[1]:
+                        higher = True
+                    else:
+                        higher = False
+
+                    currencies = get_currencies_to_compare(query_split[1])
+                    if 'jest' in query_split[1]:
+                        return compare_currencies_response(currencies, rate, higher=higher)
+
+                    elif 'był' in query_split[1]:
+                        date_to_check = get_date_from_text(query_split[1])
+                        return compare_currencies_response(currencies, rate, date=date_to_check, higher=higher)
+
+
+
 
         if 'kod' in query:
             if 'jaki' in query or 'podaj' in query:
@@ -301,7 +442,6 @@ def prepare_answer(query):
 
     except exc.NotFoundException:
         return 'Nie posiadam takich informacji'
-
     except exc.InvalidDateException:
         return 'Podano nieprawidłową datę'
 
