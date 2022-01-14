@@ -194,8 +194,7 @@ def get_currencies_from_text(text):
         second_currency = ''
         for element in text[1].split():
             second_currency += element
-            if second_currency in A_TABLE_CURRENCIES or second_currency in B_TABLE_CURRENCIES or \
-                    second_currency == 'złotego':
+            if second_currency in SPECIAL_A_TABLE_CURRENCIES or second_currency == 'złotego':
                 break
             second_currency += ' '
 
@@ -214,7 +213,7 @@ def check_difference_between_dates(text, currencies, rate):
         given_date = get_date_from_text(given_date)
         values.append(get_exchange_rate_by_date(currencies, given_date, rate))
     if len(dates) == 1:
-        second_date = date.today().strftime('%Y-%m-%d')
+        second_date = date.today().strftime('%Y-%m-%d')[:-2] + '13'
         values.append(get_exchange_rate_by_date(currencies, second_date, rate))
 
     return values[1] - values[0]
@@ -438,6 +437,7 @@ def get_best_date_response(currency, rate, date_from, date_to, time, time_unit, 
 
 
 def prepare_answer(query):
+    query = query.lower()
     try:
         if 'kurs' in query:
             if 'kupna' in query:

@@ -32,8 +32,8 @@ def init():
 
 
 if __name__ == '__main__':
-    # init()
+    init()
     while True:
-        # time.sleep(1)
-        query = input()
-        print(cm.prepare_answer(query))
+        time.sleep(1)
+        # query = input()
+        # print(cm.prepare_answer(query))
