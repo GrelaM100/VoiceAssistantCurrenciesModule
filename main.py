@@ -19,6 +19,8 @@ def on_message(client, userdata, message):
     print("rcv", topic, payload)
     answer = cm.prepare_answer(payload.lower())
     if answer is not None:
+        save_to_log('Q: ' + payload + '\n')
+        save_to_log('A: ' + answer + '\n\n')
         send("cmd/tts/" + ID, answer)
 
 
@@ -29,6 +31,11 @@ def init():
     client.connect(BROKER)
     client.loop_start()
     client.subscribe(("sig/stt/#", 0))
+
+
+def save_to_log(information):
+    with open("log.txt", "a") as file_log:
+        file_log.write(information)
 
 
 if __name__ == '__main__':

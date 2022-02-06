@@ -6,6 +6,8 @@ import calendar
 import exceptions as exc
 
 NBP_API = "http://api.nbp.pl/api/exchangerates/rates/"
+# słownik walut z tabeli A na kod tych walut, do tworzenia zapytań wykorzystuje się kody walut, słowniki poniżej służą
+# konwersji nazwy waluty na jej kod
 A_TABLE_CURRENCIES = {'bata': 'THB', 'dolara amerykańskiego': 'USD', 'dolara australijskiego': 'AUD',
                       'dolara hongkońskiego': 'HKD', 'dolara kanadyjskiego': 'CAD', 'dolara nowozelandzkiego': 'NZD',
                       'dolara singapurskiego': 'SGD', 'euro': 'EUR', 'forinta': 'HUF', 'franka szwajcarskiego': 'CHF',
@@ -18,9 +20,12 @@ A_TABLE_CURRENCIES = {'bata': 'THB', 'dolara amerykańskiego': 'USD', 'dolara au
                       'rupii indyjskiej': 'INR', 'wona południowokoreańskiego': 'KRW', 'juana': 'CNY',
                       'renminbi': 'CNY'}
 
+# wybrane, specjalne waluty z tabeli A. Przykładowo kiedy użytkownik pyta o walutę dolar zakłada się, że chodzi mu o
+# dolar amerykański, dzięki temu zapytania są bardziej intuicyjne
 SPECIAL_A_TABLE_CURRENCIES = {'dolara': 'USD', 'franka': 'CHF', 'funta': 'GBP', 'leja': 'RON', 'liry': 'TRY',
                               'szekla': 'ILS', 'peso': 'MXN', 'rubla': 'RUB', 'rupii': 'INR', 'wona': 'KRW'}
 
+# waluty z tabeli B
 B_TABLE_CURRENCIES = {'afgani': 'AFN', 'ariary': 'MGA', 'balboa': 'PAB', 'birra': 'ETB', 'boliwara': 'VES',
                       'boliwiano': 'BOB', 'kolona kostarykańskiego': 'CRC', 'kolona salwadorskiego': 'SVC',
                       'kordoby': 'NIO', 'dalasi': 'GMD', 'denara': 'MKD', 'dinara algierskiego': 'DZD',
@@ -33,7 +38,7 @@ B_TABLE_CURRENCIES = {'afgani': 'AFN', 'ariary': 'MGA', 'balboa': 'PAB', 'birra'
                       'dolara surinamskiego': 'SRD', 'dolara trynidadu i tobago': 'TTD',
                       'dolara wschodniokaraibskiego': 'XCD', 'dolara wysp salomona': 'SBD', 'dolara zimbabwe': 'ZWL',
                       'donga': 'VND', 'drama': 'AMD', 'eskudo': 'CVE', 'florina arubańskiego': 'AWG',
-                      'franka burundyjskiego': 'BIF', 'franka dżibuti': 'DJF', 'franka gwinejski': 'GNF',
+                      'franka burundyjskiego': 'BIF', 'franka dżibuti': 'DJF', 'franka gwinejskiego': 'GNF',
                       'franka komorów': 'KMF', 'franka kongijskiego': 'CDF', 'franka rwandyjskiego': 'RWF',
                       'funta egipskiego': 'EGP', 'funta gibraltarski': 'GIP', 'funta libańskiego': 'LBP',
                       'funta południowosudańskiego': 'SSP', 'funta sudańskiego': 'SDG', 'funta syryjskiego': 'SYP',
@@ -53,12 +58,36 @@ B_TABLE_CURRENCIES = {'afgani': 'AFN', 'ariary': 'MGA', 'balboa': 'PAB', 'birra'
                       'szylinga tanzańskiego': 'TZS', 'szylinga ugandyjskiego': 'UGX', 'taki': 'BDT', 'tala': 'WST',
                       'tenge': 'KZT', 'tugrika': 'MNT', 'watu': 'VUV'}
 
+# słownik służący konwersji nazw miesięcy na liczby do zapytań
 MONTHS_TO_NUM = {'stycznia': '01', 'lutego': '02', 'marca': '03', 'kwietnia': '04', 'maja': '05', 'czerwca': '06',
                  'lipca': '07', 'sierpnia': '08', 'września': '09', 'października': '10', 'listopada': '11',
                  'grudnia': '12'}
 
 
 def get_api_response(table, currency, from_date='/', to_date=''):
+    """ Funkcja zwraca dane zwrócone z API NBP w postaci JSON
+
+        Jeżeli argumenty 'from_date' oraz 'to_date' nie zostaną podane, wykorzystując ich wartości domyślne,
+        pobrany zostanie obecnie obowiazujący kurs waluty.
+
+        Argumenty
+        ---------
+        table : str
+            Tabela, w której znajduje się dana waluta
+        currency : str
+            Kod waluty
+        from_date : str, opcjonalny
+            Data w postaci ciągu znaków od której mają zostać pobrane dane, domyślna wartość to '/'
+        to_date : str, opcjonalny
+            Data w postaci ciągu znaków do której mają zostać pobrane dane, domyślna wartość to pusty ciąg znaków
+
+        Wyjątki
+        -------
+        NotFoundException
+            Wyrzucany jeżeli podane dane nie zostaną odnalezione i API zwróci kod 404. Przykładowo może się tak stać
+            kiedy podana data jest z przyszłości.
+    """
+
     if from_date != '/':
         from_date = '/' + from_date + '/'
     if to_date != '':
@@ -73,6 +102,25 @@ def get_api_response(table, currency, from_date='/', to_date=''):
 
 
 def find_table_and_rate(currency, rate):
+    """ Funkcja zwraca tabelę oraz kod podanej waluty
+
+        Argumenty
+        ---------
+        currency : str
+            Nazwa waluty
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+
+            Służy przypisaniu tabeli C w przypadku, gdy użytkownik pyta o kurs kupna lub sprzedaży
+
+        Wyjątki
+        -------
+        InvalidCurrency
+            Wyrzucany jeżeli podana waluta nie została znaleziona w tabali A i B
+    """
     if currency in SPECIAL_A_TABLE_CURRENCIES:
         table = 'a'
         currency_code = SPECIAL_A_TABLE_CURRENCIES[currency].lower()
@@ -92,6 +140,22 @@ def find_table_and_rate(currency, rate):
 
 
 def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date=''):
+    """ Funkcja zwraca wartość kursu podanej waluty do złotego
+
+        Argumenty
+        ---------
+        currency : str
+            Nazwa walty
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        from_date : str, opcjonalny
+            Data w postaci ciągu znaków od której mają zostać pobrane dane, domyślna wartość to '/'
+        to_date : str, opcjonalny
+            Data w postaci ciągu znaków do której mają zostać pobrane dane, domyślna wartość to pusty ciąg znaków
+    """
     table, currency_code = find_table_and_rate(currency, rate)
     currency_data = get_api_response(table, currency_code, from_date, to_date)
     value = currency_data['rates'][0][rate]
@@ -99,6 +163,18 @@ def get_exchange_rate_single_currency(currency, rate, from_date='/', to_date='')
 
 
 def get_current_exchange_rate(currencies, rate):
+    """ Funkcja do obliczania kursu dwóch podanych walut na podstawie ich kursu do złotego
+
+        Argumenty
+        ---------
+        currencies : list
+            Lista zawierająca dwie nazwy walut
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+    """
     values = []
     for curr in currencies:
         if curr == 'złotego':
@@ -111,12 +187,40 @@ def get_current_exchange_rate(currencies, rate):
 
 
 def get_current_exchange_rate_response(currencies, rate):
+    """ Funkcja do zwrócenia odpowiedniej informacji o aktualnym kursie podanych walut
+
+        Argumenty
+        ---------
+        currencies : list
+            Lista zawierająca dwie nazwy walut
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+    """
     value = str(round(get_current_exchange_rate(currencies, rate), 2)).replace('.', ',')
     rate_text = rate_to_text(rate)
     return 'Aktualny' + rate_text + currencies[0] + ' do ' + currencies[1] + ' wynosi około ' + value
 
 
 def validate_date(date_to_validate):
+    """ Funkcja do walidacji podanej daty
+
+        Argumenty
+        ---------
+        date_to_validate : str
+            Data do walidacji podana w postaci ciągu znaków
+
+        Wyjątki
+        -------
+        NotFoundException
+            Wyrzucany ww przypadku podania przyszłej daty lub daty przed 2 stycznia 2002 roku, ponieważ od tej daty
+            przechowywane są dane archiwalne dla kursów walut
+
+        InvalidDateException
+            Wyrzucany w przypadku podania nieprawidłowego ciągu znaków, którego nie można skonwertować na datę
+    """
     try:
         date_object = datetime.strptime(date_to_validate, '%Y-%m-%d')
         if date_object > datetime.today() or date_object < datetime(2002, 1, 2):
@@ -126,6 +230,19 @@ def validate_date(date_to_validate):
 
 
 def get_date_from_text(text):
+    """ Funkcja zwracają datę z podanego tekstu w postaci ciągu znaków
+
+        Argumenty
+        ---------
+        text : str
+            Tekst zawierający datę
+
+        Wyjątki
+        -------
+        MissingDate
+            Wyrzucany w przypadku, gdy w podanym tekście nie podano pełnej daty, to znaczy nie podano dnia miesiąca lub
+            roku
+    """
     day = ''
     month = ''
     year = ''
@@ -139,6 +256,8 @@ def get_date_from_text(text):
             month = MONTHS_TO_NUM[element]
 
     if day != '' and month != '' and year != '':
+        if len(day) == 1:
+            day = '0' + day
         concat_date = year + '-' + month + '-' + day
         validate_date(concat_date)
 
@@ -148,6 +267,16 @@ def get_date_from_text(text):
 
 
 def rate_to_text(rate):
+    """ Funkcja zwracająca typ kursu w postaci ciągu znaków
+
+        Argumenty
+        ---------
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+    """
     if rate == 'ask':
         rate_text = ' kurs sprzedaży '
     elif rate == 'bid':
@@ -159,6 +288,20 @@ def rate_to_text(rate):
 
 
 def get_exchange_rate_by_date(currencies, given_date, rate):
+    """ Funkcja do obliczania kursu dwóch podanych walut na podstawie ich kursu do złotego w podanym dniu
+
+            Argumenty
+            ---------
+            currencies : list
+                Lista zawierająca dwie nazwy walut
+            given_date : str
+                Podana data w postaci ciągu znaków
+            rate : str
+                Jedna z wartości:
+                'mid' - średni kurs
+                'bid' - kurs kupna
+                'ask' - kurs sprzedaży
+        """
     values = []
     for curr in currencies:
         if curr == 'złotego':
@@ -171,6 +314,20 @@ def get_exchange_rate_by_date(currencies, given_date, rate):
 
 
 def get_exchange_rate_by_date_response(currencies, given_date, rate):
+    """ Funkcja do zwrócenia odpowiedniej informacji o kursie podanych walut, w podanym dniu
+
+            Argumenty
+            ---------
+            currencies : list
+                Lista zawierająca dwie nazwy walut
+            given_date : str
+                Podana data w postaci ciągu znaków
+            rate : str
+                Jedna z wartości:
+                'mid' - średni kurs
+                'bid' - kurs kupna
+                'ask' - kurs sprzedaży
+        """
     given_date = get_date_from_text(given_date)
     value = str(round(get_exchange_rate_by_date(currencies, given_date, rate), 2)).replace('.', ',')
     rate_text = rate_to_text(rate)
@@ -178,6 +335,20 @@ def get_exchange_rate_by_date_response(currencies, given_date, rate):
 
 
 def get_currencies_from_text(text):
+    """ Funkcja zwraca listę dwóch walut na podstawie tekstu
+
+        Argumenty
+        ---------
+        text : str
+            Tekst zawierajacy nazwy walut
+
+        Wyjątki
+        -------
+        OnlyOneCurrency
+            Wyrzucany w przypadku podania w tekście tylko jednej nazwy waluty
+        InvalidCurrency
+            Wyrzucany, gdy nie znaleziono waluty o podanej nazwie
+    """
     text = text.split(' do ')
     if len(text) == 1:
         raise exc.OnlyOneCurrency
@@ -206,6 +377,20 @@ def get_currencies_from_text(text):
 
 
 def check_difference_between_dates(text, currencies, rate):
+    """ Funkcja do obliczania różnicy kursu podanych walut między podanymi datami
+
+        Argumenty
+        ---------
+        text : str
+            Tekst zawierajacy nazwy walut oraz daty
+        currencies : list
+                Lista zawierająca dwie nazwy walut
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+    """
     text = text.split(' od ')[1]
     dates = text.split(' do ')
     values = []
@@ -213,13 +398,27 @@ def check_difference_between_dates(text, currencies, rate):
         given_date = get_date_from_text(given_date)
         values.append(get_exchange_rate_by_date(currencies, given_date, rate))
     if len(dates) == 1:
-        second_date = date.today().strftime('%Y-%m-%d')[:-2] + '13'
+        second_date = date.today().strftime('%Y-%m-%d')
         values.append(get_exchange_rate_by_date(currencies, second_date, rate))
 
     return values[1] - values[0]
 
 
 def get_difference_between_dates_response(text, currencies, rate):
+    """ Funkcja do zwracania infromacji o różnicy kursu podanych walut między podanymi datami
+
+        Argumenty
+        ---------
+        text : str
+            Tekst zawierajacy nazwy walut oraz daty
+        currencies : list
+                Lista zawierająca dwie nazwy walut
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        """
     difference = check_difference_between_dates(text, currencies, rate)
     rate_text = rate_to_text(rate)
     rate_text = rate_text.lstrip().rstrip()
@@ -236,6 +435,15 @@ def get_difference_between_dates_response(text, currencies, rate):
 
 
 def check_code_in_table(table, word):
+    """ Funkcja zwraca kod oraz nazwę waluty na podstawie podanej tabeli oraz słowa
+
+        Argumenty
+        ---------
+        table : dict
+            Słownik reprezentujący tabelę walut
+        word : str
+            Dowolne słowo, które potencjalnie jest kodem waluty
+    """
     code = ''
     curr = ''
     for code_in_table in table.values():
@@ -248,6 +456,15 @@ def check_code_in_table(table, word):
 
 
 def check_currency_in_table(table, query):
+    """ Funkcja zwraca kod oraz nazwę waluty na podstawie podanej tabeli oraz zapytania
+
+        Argumenty
+        ---------
+        table : dict
+            Słownik reprezentujący tabelę walut
+        word : str
+            Dowolne zapytanie, w którym potencjalnie znajduje się nazwa waluty
+    """
     code = ''
     curr = ''
 
@@ -261,6 +478,18 @@ def check_currency_in_table(table, query):
 
 
 def get_currency_by_code(query):
+    """ Funkcja zwracająca infromację o tym która waluta posiada kod z zapytania
+
+        Argumenty
+        ---------
+        query : str
+            Dowolne zapytanie
+
+        Wyjątki
+        -------
+        CodeNotFound
+            Wyrzucany w przypadku nie znalezienia waluty o podanym kodzie
+    """
     words = query.split()
     code = ''
     curr = ''
@@ -281,6 +510,18 @@ def get_currency_by_code(query):
 
 
 def get_code_by_currency(query):
+    """ Funkcja zwracająca informację o kodzie podanej w zapytaniu waluty
+
+        Argumenty
+        ---------
+        query : str
+            Dowolne zapytanie
+
+        Wyjątki
+        -------
+        InvalidCurrency
+            Wyrzucany w przypadku nie odnalezienia waluty o podanej nazwie
+    """
     code, curr = check_currency_in_table(A_TABLE_CURRENCIES, query)
     if code == '' and curr == '':
         code, curr = check_currency_in_table(B_TABLE_CURRENCIES, query)
@@ -293,6 +534,18 @@ def get_code_by_currency(query):
 
 
 def get_currencies_to_compare(text):
+    """ Funkcja zwracająca listę nazw dwóch walut do porównania ich kursów
+
+        Argumenty
+        ---------
+        text : str
+            Dowolny tekst
+
+        Wyjątki
+        -------
+        InvalidCurrency
+            Wyrzucany w przypadku nie odnalezienia waluty o podanej nazwie
+    """
     text = text.split(' czy ')
     if len(text) == 1:
         raise exc.OnlyOneCurrency
@@ -342,6 +595,24 @@ def get_currencies_to_compare(text):
 
 
 def compare_currencies(currencies, rate, date='/', higher=True):
+    """ Funkcja porównująca kursy dwóch walut. Zwraca informacje o tym który kurs był większy lub mniejszy w zależności
+        od podanych argumentów
+
+        Argumenty
+        ---------
+        currencies : list
+            Lista zawierająca dwie nazwy walut do porównania
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        date : str, opcjonalny
+            Data w postaci ciągu znaków, domyślna wartość to '/' oznaczająca aktualny kurs
+        higher : bool, opcjonalny
+            Argument określający jaki kurs interesuje użytkownika większy czy mniejszy. Domyślna wartość True oznacza,
+            kurs większy
+    """
     first_currency_value = get_exchange_rate_single_currency(currencies[0], rate, date)
     second_currency_value = get_exchange_rate_single_currency(currencies[1], rate, date)
     if higher:
@@ -361,6 +632,23 @@ def compare_currencies(currencies, rate, date='/', higher=True):
 
 
 def compare_currencies_response(currencies, rate, date='/', higher=True):
+    """ Funkcja zwraca informację o porównaniu dwóch kursów na podstawie argumentów
+
+        Argumenty
+        ---------
+        currencies : list
+            Lista zawierająca dwie nazwy walut do porównania
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        date : str, opcjonalny
+            Data w postaci ciągu znaków, domyślna wartość to '/' oznaczająca aktualny kurs
+        higher : bool, opcjonalny
+            Argument określający jaki kurs interesuje użytkownika większy czy mniejszy. Domyślna wartość True oznacza,
+            kurs większy
+    """
     currency = compare_currencies(currencies, rate, date, higher)
     if rate == 'mid':
         rate = 'średni kurs'
@@ -388,6 +676,25 @@ def compare_currencies_response(currencies, rate, date='/', higher=True):
 
 
 def get_best_date(currency, rate, date_from, date_to, best=True):
+    """ Funkcja zwracająca dzień w którym kurs był największym lub najmniejszym w podanym przedziale czasowym
+
+        Argumenty
+        ---------
+        currency : str
+            Nazwa wybranej waluty
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        date_from : str
+            Data w postaci ciągu znaków od której mają zostać pobrane dane
+        date_to : str
+            Data w postaci ciągu znaków do której mają zostać pobrane dane
+        best : bool, opcjonalny
+            Argument określający czy szukać największego czy najmniejszego kursu w podanym przedziale czasowym.
+            Domyślna wartość True określa nawiększy kurs
+    """
     table, currency_code = find_table_and_rate(currency, rate)
     currency_data = get_api_response(table, currency_code, date_from, date_to)
     chosen_day = ''
@@ -406,6 +713,18 @@ def get_best_date(currency, rate, date_from, date_to, best=True):
 
 
 def get_single_currency_from_query(query):
+    """ Funkcja do pobrania nazwy waluty z zapytania
+
+        Argumenty
+        ---------
+        query : str
+            Dowolne zapytanie
+
+        Wyjątki
+        -------
+        InvalidCurrency
+            Wyrzucany w przypadku nie odnalezienia waluty o podanej nazwie
+    """
     for curr in A_TABLE_CURRENCIES:
         if curr in query:
             return curr
@@ -422,6 +741,30 @@ def get_single_currency_from_query(query):
 
 
 def get_best_date_response(currency, rate, date_from, date_to, time, time_unit, best=True):
+    """ Funkcja zwracająca informację o największym lub najmniejszym kursie w podanym przedziale czasowym w zależności
+        od podanych argumentów
+
+        Argumenty
+        ---------
+        currency : str
+            Nazwa waluty
+        rate : str
+            Jedna z wartości:
+            'mid' - średni kurs
+            'bid' - kurs kupna
+            'ask' - kurs sprzedaży
+        date_from : str
+            Data w postaci ciągu znaków od której mają zostać pobrane dane
+        date_to : str
+            Data w postaci ciągu znaków do której mają zostać pobrane dane
+        time : str
+            Miesiąc lub rok
+        time_unit : int
+            0 jeżeli spradzany jest obecny miesiąc/rok, -1 jeżeli sprawdzany jest poprzedni miesiąc/rok
+        best : bool, opcjonalny
+            Argument określający czy szukać największego czy najmniejszego kursu w podanym przedziale czasowym.
+            Domyślna wartość True określa nawiększy kurs
+    """
     day_to_return = get_best_date(currency, rate, date_from, date_to, best)
     if best:
         best = 'największy'
@@ -437,6 +780,13 @@ def get_best_date_response(currency, rate, date_from, date_to, time, time_unit, 
 
 
 def prepare_answer(query):
+    """ Funkcja do przetwarzania zapytania i zwracania odpowiedniej odpowiedzi
+
+        Argumenty
+        ---------
+        query : str
+            Dowolne zapytanie
+    """
     query = query.lower()
     try:
         if 'kurs' in query:

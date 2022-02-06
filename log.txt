@@ -1,0 +1,63 @@
+Q: Jaki jest kurs euro do z³otego
+A: Aktualny œredni kurs euro do z³otego wynosi oko³o 4,58
+
+Q: Jaki jest kurs dolara
+A: Proszê podaæ dwie waluty, dla których mam podaæ kurs
+
+Q: Jaki jest kurs bitcoina do z³otego
+A: Nie znam takiej waluty
+
+Q: Jaki by³ kurs Szekla do Z³otego 13 grudnia 2021 roku
+A: Dnia 2021-12-13 œredni kurs szekla do z³otego wynosi³ oko³o 1,32
+
+Q: Jaki by³ kurs franka do Z³otego 13 grudnia 2035 roku
+A: Nie posiadam takich informacji
+
+Q: Jaki by³ kurs dolara Fid¿i do Euro grudnia 2020 roku
+A: Podano niepe³n¹ datê. Proszê podaæ dzieñ, miesi¹c oraz rok
+
+Q: Jaki jest kod hrywny
+A: Kod hrywny to UAH
+
+Q: Jaki jest obecny kurs kupna euro do z³otego
+A: Aktualny kurs kupna euro do z³otego wynosi oko³o 4,54
+
+Q: Podaj kurs sprzeda¿y dolara do euro
+A: Aktualny kurs sprzeda¿y dolara do euro wynosi oko³o 0,89
+
+Q: która waluta ma kod GF
+A: Nie znaleziono waluty o takim kodzie
+
+Q: która waluta ma kod gnf
+A: Kod GNF to kod franka gwinejskiego
+
+Q: Jak zmieni³ siê kurs kuny do rubla od 13 grudnia 2021 roku
+A: Œredni kurs kuny do rubla wzrós³ o oko³o 0,53
+
+Q: Jak zmieni³ siê kurs dolara do z³otego od 4 stycznia 2021 roku do 31 grudnia 2021 roku
+A: Œredni kurs dolara do z³otego wzrós³ o oko³o 0,36
+
+Q: którego dnia zesz³ego roku kurs euro by³ najwiêkszy
+A: W zesz³ym roku kurs euro by³ najwiêkszy dnia 2021-11-22
+
+Q: Którego dnia w zesz³ym miesi¹cu kurs dolara by³ najwiêkszy
+A: W zesz³ym miesi¹cu kurs dolara by³ najwiêkszy dnia 2022-01-31
+
+Q: Którego dnia w tym roku kurs rupii indyjskiej by³ najmniejszy
+A: W tym roku kurs rupii indyjskiej by³ najmniejszy dnia 2022-01-18
+
+Q: Którego dnia w tym miesi¹cu kurs peso by³ najmniejszy
+A: W tym miesi¹cu kurs peso by³ najmniejszy dnia 2022-02-01
+
+Q: którego dnia zesz³ego roku kurs bitcoina by³ najwiêkszy
+A: Nie znam takiej waluty
+
+Q: Jaki jest kurs Która jest godzina
+A: Proszê podaæ dwie waluty, dla których mam podaæ kurs
+
+Q: kurs której z walut jest wiêkszy Juana Czy euro
+A: œredni kurs euro jest wiêkszy
+
+Q: kurs której z walut jest mniejszy Juana Czy euro
+A: œredni kurs juana jest mniejszy
+

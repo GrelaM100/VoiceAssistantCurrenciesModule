@@ -45,5 +45,6 @@ def loop():
             time.sleep(1)
 
 
-init()
-loop()
+if __name__ == '__main__':
+    init()
+    loop()
